@@ -1,76 +1,71 @@
-# Tonyapps_Search
+# Smarter Search for Magento 2
 
-Smarter storefront search for Magento 2.4.8 on OpenSearch.
+Product and category autocomplete, typo-tolerant search, promoted products and editable stop words on top of
+Magento's own OpenSearch search.
 
-Core Magento plus OpenSearch already handles most of the feature list. This module adds only the parts core is missing:
+Magento Open Source with OpenSearch already handles full-text search, synonyms and search suggestions. What it
+lacks is a useful search dropdown, a second chance for misspelt queries, a way to pin products to a search term,
+and control over which words are ignored. This module adds exactly those parts and leaves the rest to core.
 
-| Feature | How |
-|---|---|
-| Full-text, multi-store, multilingual | Core. One index per store view. Stemmers and stop words are set per locale in `Magento_Elasticsearch/etc/esconfig.xml`. |
-| Synonyms | Core: **Marketing > SEO & Search > Search Synonyms**. They are built into the index, so saving a group invalidates `catalogsearch_fulltext`. Cron's `indexer_reindex_all_invalid` rebuilds it, or run `bin/magento indexer:reindex catalogsearch_fulltext`. |
-| **Stop words** | `Model\Preprocessor\Stopwords` (a preference on the core preprocessor). It takes core's CSV list for the locale, adds **Additional Stop Words** and removes **Words to Keep**, both set per store view. It also fixes core's case-sensitive matching, which let "The" through. Applied at query time, so no reindex is needed. |
-| "Did you mean" / related terms | Core: **Catalog > Catalog Search > Enable Search Suggestions / Recommendations** (on by default). |
-| Partial SKU / name | Core `quick_search_container` already runs `match_phrase_prefix` on name and sku. |
-| Long-tail queries | Core. Minimum Should Match is empty by default, so a query matches when any one of its words matches. |
-| **Product + category autocomplete** | `Model\Autocomplete\{Product,Category}DataProvider` are added to core `Magento\Search\Model\Autocomplete`. The `form-mini-mixin.js` mixin shows an image and price in each row, and clicking a row (or Enter on it) opens that page. Category rows show their path below the store root ("Men › Tops › Jackets"), so same-named categories can be told apart. |
-| **Typo-tolerant fallback** | `Plugin\Fallback`. When a quick search finds nothing, it runs the same search once more with `fuzziness: AUTO`. Exact matching stays the default, so "shirt" won't turn into "short". A term rescued this way is saved with **0 results**, so the typo is never suggested and shows in **Marketing > Search Terms** as a 0-result term (a candidate for a synonym). With layered-navigation filters on, an empty page first checks the term alone (one 1-hit query): if the term matches without the filters, the filters emptied the page and there's no fuzzy retry; a misspelt term still retries with the filters kept. |
-| **Search-term rows for correct words** | `Plugin\AddHistoryTerms`. With "Enable Search Suggestions" on, core only shows the OpenSearch suggester's corrections, so a correctly spelled "jacket" got no term row. Core's own search-history terms ("jacket (23)") now come first, then the corrections, deduplicated and capped at the Autocomplete Limit. |
-| **Promoted products** | `Plugin\Promote` plus a new `search_query.promoted_skus` column. Add SKUs on **Marketing > Search Terms > edit term**. The listed products are shown first, in the order you list them, even if they don't contain the search term. Visibility, category, price and layered-navigation filters still apply. |
+## Features
 
-## Configuration
+- **Product and category autocomplete**: the search dropdown shows matching products with image and price, and
+  matching categories with their path ("Men › Tops › Jackets"), so same-named categories can be told apart.
+  Clicking a row, or pressing Enter on it, opens that page.
+- **Typo-tolerant fallback**: when a search finds nothing, it runs once more with fuzzy matching, so "jakcet" still
+  finds jackets. Exact matching stays the default, so "shirt" doesn't turn into "short".
+- **Misspellings stay out of suggestions**: a term rescued by the fallback is saved with 0 results, so the typo is
+  never suggested to other shoppers. It shows in *Marketing > Search Terms* as a 0-result term, a candidate for a
+  synonym.
+- **Popular terms in the dropdown**: correctly spelt searches show your store's own popular terms with their result
+  counts ("jacket (23)") before spelling corrections.
+- **Promoted products**: list SKUs on a search term and those products appear first, in your order, even if they
+  don't contain the search term. Visibility, category, price and layered-navigation filters still apply.
+- **Stop words you control**: add your own stop words or keep built-in ones searchable (for example "it" for an IT
+  store), per store view, with no reindex. Matching is case-insensitive, so "The" is treated like "the".
+- **Built on core**: multi-store and multilingual search, synonyms, "Did you mean" suggestions and partial SKU
+  search keep working as in core Magento.
 
-**Stores > Configuration > Catalog > Catalog > Catalog Search** (store scope):
+## How it works
 
-* Typo-Tolerant Fallback Search: default Yes
-* Products in Autocomplete: default 5 (0 turns it off)
-* Categories in Autocomplete: default 3 (0 turns it off)
-* Additional Stop Words / Words to Keep: comma or newline separated
+Shoppers type in the normal storefront search box. The dropdown shows search terms, then products and categories.
+On the results page, promoted products come first, and an empty result triggers one fuzzy retry. If layered
+navigation filters are what emptied the page, the module doesn't retry, so filters behave as shoppers expect.
 
-## Known limits
+Merchants manage promoted SKUs on the search term's edit page and the settings in store configuration. Saving a
+term's promoted SKUs clears the cached result pages, so the change shows immediately.
 
-* Core caches the stop word list under one cache key for all locales. On a store with several languages, the first locale cached is used for up to 15 minutes. This is not fixed here.
-* Promotions are read from the `q` request parameter through `QueryFactory`, so they don't apply to GraphQL search.
+## Good to know
 
-## 2026-10-30 review fixes
+- Promoted products apply to the storefront search page, not to GraphQL search (for example a PWA storefront).
+- On a store with several languages, Magento caches one stop-word list for all locales, so for up to 15 minutes a
+  store view may use another locale's built-in list. This is core behaviour the module does not change.
+- Spelling corrections in the dropdown come from OpenSearch (core) and can be odd word stems ("lavend"). Turn them
+  off with *Enable Search Suggestions = No*; the popular-term rows stay.
+- Synonyms are core Magento: after editing them, the search index is rebuilt by cron or by a manual reindex.
 
-- On 2.4.8, core caches the result pages of popular search terms in the full page cache (`Result\Index::getCacheableResult`). Saving a search term whose Promoted SKUs changed now cleans the `full_page` cache, so the change shows straight away.
+## Requirements
 
-## Install
+- Magento Open Source 2.4.8 with OpenSearch
+- PHP 8.3 or 8.4
+- Magento modules: Search, CatalogSearch, AdvancedSearch, Elasticsearch, OpenSearch
+
+## Installation
 
 ```
+composer require tonyapps/module-search
 bin/magento module:enable Tonyapps_Search
 bin/magento setup:upgrade
 ```
 
-## Tests
+## Configuration
 
-```
-vendor/bin/phpunit -c dev/tests/unit/phpunit.xml.dist app/code/Tonyapps/Search/Test/Unit
-```
+- **Stores > Configuration > Catalog > Catalog > Catalog Search**: Typo-Tolerant Fallback Search (default Yes),
+  Products in Autocomplete (default 5, 0 turns it off), Categories in Autocomplete (default 3, 0 turns it off),
+  Additional Stop Words, Words to Keep. All settable per store view.
+- **Marketing > SEO & Search > Search Terms > edit term**: Promoted SKUs.
+- **Marketing > SEO & Search > Search Synonyms**: core synonyms.
 
-* Correction rows from OpenSearch's suggester are core and can be odd stems ("lavend", "lap"). Turn them off with **Enable Search Suggestions = No**; the history terms stay.
+## For developers
 
-## Status (2026-10-25): done
-
-Browser check (headless Chromium, desktop and 390px wide) on 2026-10-25:
-* ArrowDown to a product row fills the input and selects the row. Enter opens that product.
-* Enter on a core term row, or with nothing selected, runs a normal search.
-* Escape closes the dropdown. Clicking a category row opens the category. No JS errors.
-* At 390px the dropdown fits the viewport with no sideways scroll.
-* Fixed during the check: "jacket" showed two identical "Jackets" category rows (Men and Women). Rows now show the full path.
-* Added after the check: history term rows for correctly spelled words ("jacket" → "jacket (23)", "24-" → "24-MB0 (8)"), and typos rescued by the fallback are saved with 0 results ("jakcet" still finds 13 products on the page but is no longer suggested). 15 unit tests pass, and the browser run passes again, including Enter on a term row.
-
-## Status (2026-09-29)
-
-Verified live in DDEV on Luma with sample data:
-* Autocomplete returns category and product rows with image and price.
-* The typo fallback works: "jakcet" returns 23 results, the same as "jacket".
-* Partial SKU works: "24-MB0" finds the bags.
-* Promoted `24-MB01,MJ04-XS-Black` on "jacket": the duffle bag is first (the total goes from 23 to 24). The not-visible child SKU stays hidden.
-* Stop words: adding "gym" takes "lando gym" from 27 results to 1. Keeping "the" takes "The lando" from 1 result to 172.
-* Core synonyms: "parka,jacket" takes "parka" from 1 result to 17 after a reindex.
-* The admin Promoted SKUs field renders with the saved value.
-* The frontend mixin and its CSS are served.
-* No exceptions were logged.
-* Unit tests: 9 pass (fallback retry: once, only on 0 hits, flag reset even on error; query rewrites; stop words).
-
+Architecture, decisions, data model and tests are in [AGENTS.md](AGENTS.md).
