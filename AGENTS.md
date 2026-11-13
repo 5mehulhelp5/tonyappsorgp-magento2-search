@@ -59,8 +59,6 @@ No own ACL or menu.
 - Promotions are read from the `q` request parameter through `QueryFactory`, so they don't apply to GraphQL search.
 - Correction rows from OpenSearch's suggester are core and can be odd stems ("lavend", "lap"). Turn them off with
   **Enable Search Suggestions = No**; the history terms stay.
-- `module.xml` sequences `Magento_AdvancedSearch` and `Magento_OpenSearch`, but `composer.json` does not require
-  `magento/module-advanced-search` or `magento/module-open-search` (observed during the README split; not changed).
 
 ## Tests
 
@@ -73,6 +71,8 @@ Browser checks so far: headless Chromium against DDEV, desktop and 390px wide.
 
 ## Change history
 
+- **2026-11-13 package metadata** — `composer.json` requires advanced-search, open-search, catalog, config and store,
+  which the code uses.
 - **2026-10-30 review fixes** — On 2.4.8, core caches the result pages of popular search terms in the full page
   cache (`Result\Index::getCacheableResult`). Saving a search term whose Promoted SKUs changed now cleans the
   `full_page` cache, so the change shows straight away.
