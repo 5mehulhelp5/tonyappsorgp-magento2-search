@@ -71,6 +71,8 @@ Browser checks so far: headless Chromium against DDEV, desktop and 390px wide.
 
 ## Change history
 
+- **2026-11-16** — Released as free software under GPL-3.0-or-later (owner decision): `LICENSE` added,
+  `composer.json` license changed from `proprietary`, License section in the README.
 - **2026-11-13 package metadata** — `composer.json` requires advanced-search, open-search, catalog, config and store,
   which the code uses.
 - **2026-10-30 review fixes** — On 2.4.8, core caches the result pages of popular search terms in the full page
