@@ -15,7 +15,6 @@
         "magento/module-search": "*",
         "magento/module-store": "*"
     },
-    "version": "1.0.0",
     "autoload": {
         "files": ["registration.php"],
         "psr-4": {
